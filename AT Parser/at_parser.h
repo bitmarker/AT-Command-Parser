@@ -5,7 +5,7 @@
 
 #define AT_MAX_TEMP_STRING	50
 
-typedef char (*at_command_callback)(unsigned char *value);
+typedef char (*at_callback)(unsigned char *value);
 
 #define AT_OK 		0
 #define AT_ERROR 	1
@@ -21,7 +21,9 @@ typedef char (*at_command_callback)(unsigned char *value);
 #endif
 
 unsigned long at_hash(string_t str);
-void at_register_command(string_t command, at_command_callback getter, at_command_callback setter, at_command_callback test, at_command_callback execute);
+void at_register_command(string_t command, at_callback getter, at_callback setter, at_callback test, at_callback execute);
+char at_parse_line(string_t line, unsigned char *ret);
+
 
 
 #endif

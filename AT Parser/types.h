@@ -5,10 +5,9 @@
 #define NULL 0
 #endif
 
-typedef unsigned int uint16_t;
-typedef signed int int16_t;
+typedef unsigned short uint16_t;
+typedef signed short int16_t;
 
 typedef const unsigned char * string_t;
-
 
 #endif
