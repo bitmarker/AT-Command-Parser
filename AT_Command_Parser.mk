@@ -13,7 +13,7 @@ CurrentFileName        :=
 CurrentFilePath        :=
 CurrentFileFullPath    :=
 User                   :=Leonid Lezner
-Date                   :=2015-04-19
+Date                   :=2015-04-24
 CodeLitePath           :="/Users/leonidlezner/Library/Application Support/codelite"
 LinkerName             :=/usr/bin/g++ 
 SharedObjectLinkerName :=/usr/bin/g++ -dynamiclib -fPIC
@@ -60,7 +60,7 @@ AS       := /usr/bin/as
 ## User defined environment variables
 ##
 CodeLiteDir:=/Applications/codelite.app/Contents/SharedSupport/
-Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/at_parser.c$(ObjectSuffix) 
+Objects0=$(IntermediateDirectory)/main.c$(ObjectSuffix) $(IntermediateDirectory)/at_parser.c$(ObjectSuffix) $(IntermediateDirectory)/my_string.c$(ObjectSuffix) 
 
 
 
@@ -102,6 +102,14 @@ $(IntermediateDirectory)/at_parser.c$(DependSuffix): at_parser.c
 
 $(IntermediateDirectory)/at_parser.c$(PreprocessSuffix): at_parser.c
 	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/at_parser.c$(PreprocessSuffix) "at_parser.c"
+
+$(IntermediateDirectory)/my_string.c$(ObjectSuffix): my_string.c $(IntermediateDirectory)/my_string.c$(DependSuffix)
+	$(CC) $(SourceSwitch) "/Users/leonidlezner/Documents/Dev/Leo/AT_Command_Parser/my_string.c" $(CFLAGS) $(ObjectSwitch)$(IntermediateDirectory)/my_string.c$(ObjectSuffix) $(IncludePath)
+$(IntermediateDirectory)/my_string.c$(DependSuffix): my_string.c
+	@$(CC) $(CFLAGS) $(IncludePath) -MG -MP -MT$(IntermediateDirectory)/my_string.c$(ObjectSuffix) -MF$(IntermediateDirectory)/my_string.c$(DependSuffix) -MM "my_string.c"
+
+$(IntermediateDirectory)/my_string.c$(PreprocessSuffix): my_string.c
+	@$(CC) $(CFLAGS) $(IncludePath) $(PreprocessOnlySwitch) $(OutputSwitch) $(IntermediateDirectory)/my_string.c$(PreprocessSuffix) "my_string.c"
 
 
 -include $(IntermediateDirectory)/*$(DependSuffix)

@@ -94,5 +94,8 @@
     <File Name="main.c"/>
     <File Name="at_parser.c"/>
     <File Name="at_parser.h"/>
+    <File Name="my_string.c"/>
+    <File Name="my_string.h"/>
+    <File Name="types.h"/>
   </VirtualDirectory>
 </CodeLite_Project>

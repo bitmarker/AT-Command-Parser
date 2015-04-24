@@ -5,6 +5,8 @@ typedef struct _at_command
 	unsigned long hash;
 	at_command_callback setter;
 	at_command_callback getter;
+	at_command_callback test;
+	at_command_callback execute;
 } AT_COMMAND;
 
 #ifndef AT_COMMANDS_NUM
@@ -13,7 +15,7 @@ typedef struct _at_command
 
 AT_COMMAND at_registered_commands[AT_COMMANDS_NUM];
 
-unsigned long at_hash(unsigned char *str)
+unsigned long at_hash(string_t str)
 {
 	unsigned long hash = 5381;
 	int c;
@@ -24,13 +26,15 @@ unsigned long at_hash(unsigned char *str)
 	return hash;
 }
 
-void at_register_command(unsigned char * command, at_command_callback getter, at_command_callback setter)
+void at_register_command(string_t command, at_command_callback getter, at_command_callback setter, at_command_callback test, at_command_callback execute)
 {
 	int i;
 	AT_COMMAND new_cmd;
 	new_cmd.hash = at_hash(command);
 	new_cmd.getter = getter;
 	new_cmd.setter = setter;
+	new_cmd.execute = execute;
+	new_cmd.test = test;
 	
 	for(i = 0; i < AT_COMMANDS_NUM; i++)
 	{
@@ -42,25 +46,50 @@ void at_register_command(unsigned char * command, at_command_callback getter, at
 	}
 }
 
-char at_execute_command(unsigned char *command, char *value, char set_value)
+char at_execute_command(string_t command, unsigned char *value, unsigned char type)
 {
 	int i;
 	
 	char result = AT_ERROR;
 	
 	unsigned long hash = at_hash(command);
-	
+
 	for(i = 0; i < AT_COMMANDS_NUM; i++)
 	{
 		if(at_registered_commands[i].hash == hash)
-		{
-			if(set_value)
+		{			
+			switch(type)
 			{
-				result = at_registered_commands[i].setter(value);
-			}
-			else
-			{
-				result = at_registered_commands[i].getter(value);				
+				case AT_PARSER_STATE_WRITE:
+					if(at_registered_commands[i].setter == 0)
+					{
+						return AT_ERROR;
+					}
+					result = at_registered_commands[i].setter(value);
+					break;
+				case AT_PARSER_STATE_READ:
+					if(at_registered_commands[i].getter == 0)
+					{
+						return AT_ERROR;
+					}
+					result = at_registered_commands[i].getter(value);
+					break;
+				case AT_PARSER_STATE_TEST:
+					if(at_registered_commands[i].test == 0)
+					{
+						return AT_ERROR;
+					}
+					result = at_registered_commands[i].test(value);
+					break;
+				case AT_PARSER_STATE_COMMAND:
+					if(at_registered_commands[i].execute == 0)
+					{
+						return AT_ERROR;
+					}
+					result = at_registered_commands[i].execute(value);
+					break;			
+				default:
+					result = AT_ERROR;
 			}
 		}
 	}
@@ -68,3 +97,106 @@ char at_execute_command(unsigned char *command, char *value, char set_value)
 	return result;
 }
 
+char at_parse_line(string_t line, unsigned char *ret)
+{
+	uint16_t i;
+	
+	char result = AT_ERROR;
+	
+	char state = AT_PARSER_STATE_COMMAND;
+	
+	int16_t start = ms_str_find(line, AT_COMMAND_MARKER);
+	
+	uint16_t line_len = ms_strlen(line);
+	
+	int16_t index_write_start = -1;
+	
+	int16_t index_command_end = line_len - 1;
+	
+	unsigned char temp[AT_MAX_TEMP_STRING];
+	
+	if(start >= 0)
+	{
+		// Skip the marker
+		start += ms_strlen(AT_COMMAND_MARKER);
+		
+		for(i = start; i < line_len; i++)
+		{
+			// Execute 'get' command
+			if(line[i] == '?' && state == AT_PARSER_STATE_COMMAND)
+			{
+				index_command_end = i - 1;
+
+				if(i < (line_len - 1))
+				{
+					if(line[i + 1] != '=')
+					{
+						state = AT_PARSER_STATE_READ;
+					}
+					else
+					{
+						index_write_start = i + 2;
+						state = AT_PARSER_STATE_WRITE;
+					}
+				}
+				else
+				{
+					state = AT_PARSER_STATE_READ;					
+				}
+			}
+			else if(line[i] == '=' && state == AT_PARSER_STATE_COMMAND)
+			{
+				index_command_end = i - 1;
+
+				if(i < (line_len - 1))
+				{
+					if(line[i + 1] == '?')
+					{
+						state = AT_PARSER_STATE_TEST;
+					}
+					else
+					{
+						return AT_ERROR;
+					}
+				}
+				else
+				{
+					return AT_ERROR;				
+				}
+			}
+		}
+		
+		ret[0] = 0;
+		
+		switch(state)
+		{
+			case AT_PARSER_STATE_COMMAND:
+			case AT_PARSER_STATE_READ:
+			case AT_PARSER_STATE_TEST:
+				ms_array_slice_to_string(line, start, index_command_end, temp);
+				result = at_execute_command(temp, ret, state);
+				break;
+			
+			case AT_PARSER_STATE_WRITE:
+				ms_array_slice_to_string(line, start, index_command_end, temp);
+				if(index_write_start <= (line_len - 1))
+				{
+					ms_array_slice_to_string(line, index_write_start, line_len - 1, ret);
+					result = at_execute_command(temp, ret, state);
+				}
+				else
+				{
+					result = at_execute_command(temp, "", state);
+				}
+				break;
+			
+			default:
+				return AT_ERROR;
+		}
+		
+		//printf("{%s} CMD: %d - %d; state: %d, iws: %d\n\n", line, start, index_command_end, state, index_write_start);
+	}
+	
+	
+	return result;
+} 
