@@ -113,7 +113,7 @@ char at_parse_line(string_t line, unsigned char *ret)
     char result = AT_ERROR;
     
     char state = AT_PARSER_STATE_COMMAND;
-    
+        
     int16_t start = ms_str_find(line, (string_t)AT_COMMAND_MARKER);
     
     uint16_t line_len = ms_strlen(line);
